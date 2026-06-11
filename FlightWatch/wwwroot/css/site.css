@@ -1,31 +1,181 @@
 html {
-  font-size: 14px;
+    font-size: 14px;
 }
 
 @media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
+    html {
+        font-size: 16px;
+    }
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
 html {
-  position: relative;
-  min-height: 100%;
+    position: relative;
+    min-height: 100%;
 }
 
 body {
-  margin-bottom: 60px;
+    margin-bottom: 60px;
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
+    color: var(--bs-secondary-color);
+    text-align: end;
 }
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
+    text-align: start;
+}
+
+/* ─── FlightWatch ─────────────────────────────────────── */
+
+body.flightwatch-page {
+    margin-bottom: 0;
+    overflow: hidden;
+    margin-top: 16px;
+}
+
+#map {
+    height: calc(100vh - 120px);
+    width: 100%;
+    margin-top: 16px;
+}
+
+#info {
+    position: absolute;
+    top: 15px;
+    right: 10px;
+    z-index: 1000;
+    background: white;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-family: sans-serif;
+    font-size: 14px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+#sidebar {
+    display: none;
+    position: fixed;
+    top: 72px;
+    right: 0;
+    width: 300px;
+    height: calc(100vh - 88px);
+    background: white;
+    z-index: 998;
+    box-shadow: -2px 0 8px rgba(0,0,0,0.2);
+    font-family: sans-serif;
+    font-size: 14px;
+    overflow-y: auto;
+}
+
+#sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid #eee;
+}
+
+#sidebar-callsign {
+    font-size: 18px;
+}
+
+#sidebar-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #666;
+}
+
+#sidebar-body {
+    padding: 16px;
+}
+
+    #sidebar-body table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    #sidebar-body td {
+        padding: 6px 0;
+    }
+
+        #sidebar-body td:first-child {
+            color: #888;
+        }
+
+        #sidebar-body td:last-child {
+            text-align: right;
+        }
+
+/* ─── Navbar ──────────────────────────────────────────── */
+
+header {
+    position: relative;
+    z-index: 999;
+}
+
+.fw-navbar {
+    background: white;
+    border-bottom: 1px solid #dee2e6;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    height: 56px;
+}
+
+.fw-navbar-inner {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 16px;
+}
+
+.fw-brand {
+    font-size: 18px;
+    font-weight: 600;
+    color: #212529;
+    text-decoration: none;
+    margin-right: 24px;
+}
+
+    .fw-brand:hover {
+        color: #0d6efd;
+    }
+
+.fw-nav-links {
+    flex-grow: 1;
+}
+
+.fw-nav-list {
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    gap: 8px;
+}
+
+.fw-nav-link {
+    color: #212529;
+    text-decoration: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+    .fw-nav-link:hover {
+        background: #f8f9fa;
+        color: #0d6efd;
+    }
+
+/* ─── Footer ──────────────────────────────────────────── */
+
+.fw-footer {
+    border-top: 1px solid #dee2e6;
+    padding: 16px 0;
+    color: #6c757d;
+    font-size: 14px;
 }

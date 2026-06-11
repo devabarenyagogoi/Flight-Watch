@@ -2,8 +2,8 @@
     minZoom: 2,
     maxZoom: 20,
     worldCopyJump: true,
-    maxBounds: [[-90, -180], [90, 180]], // allows bleed on each side
-    maxBoundsViscosity: 0.8  // soft resistance at edges, not a hard stop
+    maxBounds: [[-90, -260], [90, 260]],
+    maxBoundsViscosity: 0.8
 }).setView([20, 0], 3);
 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -14,6 +14,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r
 
 let nightOverlay = null;
 let twilightOverlays = [];
+let currentTrack = null;
 
 function getDayOfYear(date) {
     const start = new Date(date.getFullYear(), 0, 0);
@@ -48,12 +49,10 @@ function getTerminatorPoints(now, offsetDeg) {
 function updateTerminator() {
     const now = new Date();
 
-    // Remove old overlays
     if (nightOverlay) map.removeLayer(nightOverlay);
     twilightOverlays.forEach(l => map.removeLayer(l));
     twilightOverlays = [];
 
-    // Core night (darkest)
     nightOverlay = L.polygon(getTerminatorPoints(now, 0), {
         color: 'transparent',
         fillColor: '#000033',
@@ -62,12 +61,11 @@ function updateTerminator() {
         smoothFactor: 3
     }).addTo(map);
 
-    // Twilight gradient layers
     const twilightLayers = [
-        { offset: 3, opacity: 0.25 }, // civil twilight
-        { offset: 6, opacity: 0.19 }, // nautical twilight
-        { offset: 9, opacity: 0.13 }, // astronomical twilight
-        { offset: 12, opacity: 0.07 }, // outer glow
+        { offset: 3, opacity: 0.25 },
+        { offset: 6, opacity: 0.19 },
+        { offset: 9, opacity: 0.13 },
+        { offset: 12, opacity: 0.07 },
     ];
 
     twilightLayers.forEach(({ offset, opacity }) => {
@@ -100,6 +98,67 @@ const planeIcon = (heading) => L.divIcon({
     className: ''
 });
 
+// Sidebar
+
+const positionSources = { 0: 'ADS-B', 1: 'ASTERIX', 2: 'MLAT', 3: 'FLARM' };
+const categories = {
+    0: 'No Info', 1: 'No ADS-B Info', 2: 'Light', 3: 'Small', 4: 'Large',
+    5: 'High Vortex Large', 6: 'Heavy', 7: 'High Performance', 8: 'Rotorcraft',
+    9: 'Glider', 10: 'Lighter-than-air', 11: 'Parachutist', 12: 'Ultralight',
+    13: 'Reserved', 14: 'UAV', 15: 'Space Vehicle', 16: 'Emergency Vehicle',
+    17: 'Service Vehicle', 18: 'Point Obstacle', 19: 'Cluster Obstacle', 20: 'Line Obstacle'
+};
+
+async function openSidebar(f) {
+    document.getElementById('sidebar-callsign').textContent = f.callsign ?? 'Unknown';
+    document.getElementById('sb-country').textContent = f.originCountry ?? 'N/A';
+    document.getElementById('sb-altitude').textContent = f.baroAltitude ? (f.baroAltitude / 1000).toFixed(1) + ' km' : 'N/A';
+    document.getElementById('sb-geo-altitude').textContent = f.geoAltitude ? (f.geoAltitude / 1000).toFixed(1) + ' km' : 'N/A';
+    document.getElementById('sb-speed').textContent = f.velocity ? (f.velocity * 3.6).toFixed(0) + ' km/h' : 'N/A';
+    document.getElementById('sb-heading').textContent = f.trueTrack ? f.trueTrack.toFixed(1) + '°' : 'N/A';
+    document.getElementById('sb-vrate').textContent = f.verticalRate ? f.verticalRate.toFixed(1) + ' m/s' : 'N/A';
+    document.getElementById('sb-ground').textContent = f.onGround ? 'Yes' : 'No';
+    document.getElementById('sb-squawk').textContent = f.squawk ?? 'N/A';
+    document.getElementById('sb-icao').textContent = f.icao24 ?? 'N/A';
+    document.getElementById('sb-source').textContent = positionSources[f.positionSource] ?? 'N/A';
+    document.getElementById('sb-category').textContent = categories[f.category] ?? 'N/A';
+    document.getElementById('sb-spi').textContent = f.spi ? 'Yes' : 'No';
+    document.getElementById('sb-contact').textContent = f.lastContact ? new Date(f.lastContact * 1000).toUTCString() : 'N/A';
+
+    document.getElementById('sidebar').style.display = 'block';
+
+    // Clear old track
+    if (currentTrack) {
+        map.removeLayer(currentTrack);
+        currentTrack = null;
+    }
+
+    // Fetch and draw new track
+    try {
+        const res = await fetch(`/api/flight/track/${f.icao24}`);
+        const waypoints = await res.json();
+
+        if (waypoints.length > 1) {
+            currentTrack = L.polyline(waypoints, {
+                color: '#64b5f6',
+                weight: 2,
+                opacity: 0.8,
+                dashArray: '6, 6'
+            }).addTo(map);
+        }
+    } catch (err) {
+        console.error('Failed to fetch track:', err);
+    }
+}
+
+function closeSidebar() {
+    document.getElementById('sidebar').style.display = 'none';
+    if (currentTrack) {
+        map.removeLayer(currentTrack);
+        currentTrack = null;
+    }
+}
+
 // SignalR Connection
 
 let markers = {};
@@ -120,14 +179,7 @@ connection.on("ReceiveFlights", (flights) => {
             icon: planeIcon(f.trueTrack ?? 0),
         }).addTo(map);
 
-        marker.bindPopup(`
-            <b>${f.callsign ?? 'Unknown'}</b><br>
-            Country: ${f.originCountry}<br>
-            Altitude: ${f.baroAltitude ? (f.baroAltitude / 1000).toFixed(1) + ' km' : 'N/A'}<br>
-            Speed: ${f.velocity ? (f.velocity * 3.6).toFixed(0) + ' km/h' : 'N/A'}<br>
-            Heading: ${f.trueTrack ? f.trueTrack.toFixed(1) + '°' : 'N/A'}<br>
-            On Ground: ${f.onGround ? 'Yes' : 'No'}
-        `);
+        marker.on('click', () => openSidebar(f));
 
         markers[f.icao24] = marker;
     });

@@ -14,12 +14,13 @@ public class OpenSkyService
 
     private List<FlightState>? _cachedFlights;
     private DateTime _cacheExpiresAt = DateTime.MinValue;
-    private readonly TimeSpan _cacheDuration = TimeSpan.FromSeconds(90);
+    private readonly TimeSpan _cacheDuration;
 
     public OpenSkyService(HttpClient httpClient, IConfiguration config)
     {
         _httpClient = httpClient;
         _config = config;
+        _cacheDuration = TimeSpan.FromSeconds(config.GetValue<int>("FlightWatch:BroadcastIntervalSeconds"));
     }
 
     private async Task<string> GetTokenAsync()
@@ -98,5 +99,38 @@ public class OpenSkyService
         _cacheExpiresAt = DateTime.UtcNow.Add(_cacheDuration);
 
         return _cachedFlights;
+    }
+
+    public async Task<List<double[]>> GetFlightTrackAsync(string icao24)
+    {
+        var token = await GetTokenAsync();
+        var request = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}/tracks/all?icao24={icao24}&time=0");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _httpClient.SendAsync(request);
+
+        if (!response.IsSuccessStatusCode)
+            return new List<double[]>();
+
+        var json = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(json);
+
+        var waypoints = new List<double[]>();
+        var path = doc.RootElement.GetProperty("path");
+
+        foreach (var point in path.EnumerateArray())
+        {
+            var arr = point.EnumerateArray().ToList();
+            if (arr[1].ValueKind == JsonValueKind.Null || arr[2].ValueKind == JsonValueKind.Null)
+                continue;
+
+            waypoints.Add(new double[]
+            {
+            arr[1].GetDouble(), // latitude
+            arr[2].GetDouble()  // longitude
+            });
+        }
+
+        return waypoints;
     }
 }
