@@ -11,12 +11,30 @@
 <div id="info">✈️ Flights: <strong id="count">Loading...</strong></div>
 <div id="map"></div>
 
-<div id="sidebar">
-    <div id="sidebar-header">
-        <strong id="sidebar-callsign">Unknown</strong>
-        <button id="sidebar-close" onclick="closeSidebar()">✕</button>
+<!-- Left Sidebar: Country Filter -->
+<div id="left-sidebar">
+    <div id="left-sidebar-header">
+        <strong>Filter by Country</strong>
+        <button id="left-sidebar-close" onclick="closeLeftSidebar()">✕</button>
     </div>
-    <div id="sidebar-body">
+    <div id="left-sidebar-body">
+        <input type="text" id="country-search" placeholder="Search countries..." />
+        <div id="country-list"></div>
+    </div>
+</div>
+
+<button id="left-sidebar-toggle" onclick="toggleLeftSidebar()">
+    <i class="bi bi-funnel-fill"></i>
+</button>
+
+<!-- Right Sidebar: Flight Info -->
+<div id="right-sidebar">
+    <div id="right-sidebar-header">
+        <h5>Flight Details</h5>
+        <strong id="right-sidebar-callsign">Unknown</strong>
+        <button id="right-sidebar-close" onclick="closeRightSidebar()">✕</button>
+    </div>
+    <div id="right-sidebar-body">
         <table>
             <tr><td>Country</td><td id="sb-country"></td></tr>
             <tr><td>Altitude</td><td id="sb-altitude"></td></tr>

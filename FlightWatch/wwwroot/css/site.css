@@ -57,7 +57,9 @@ body.flightwatch-page {
     box-shadow: 0 2px 6px rgba(0,0,0,0.3);
 }
 
-#sidebar {
+/* ─── Right Sidebar ───────────────────────────────────── */
+
+#right-sidebar {
     display: none;
     position: fixed;
     top: 72px;
@@ -72,7 +74,7 @@ body.flightwatch-page {
     overflow-y: auto;
 }
 
-#sidebar-header {
+#right-sidebar-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -80,11 +82,11 @@ body.flightwatch-page {
     border-bottom: 1px solid #eee;
 }
 
-#sidebar-callsign {
+#right-sidebar-header strong {
     font-size: 18px;
 }
 
-#sidebar-close {
+#right-sidebar-close {
     background: none;
     border: none;
     font-size: 20px;
@@ -92,26 +94,141 @@ body.flightwatch-page {
     color: #666;
 }
 
-#sidebar-body {
+#right-sidebar-body {
     padding: 16px;
 }
 
-    #sidebar-body table {
-        width: 100%;
-        border-collapse: collapse;
-    }
+#right-sidebar-body table {
+    width: 100%;
+    border-collapse: collapse;
+}
 
-    #sidebar-body td {
-        padding: 6px 0;
-    }
+#right-sidebar-body td {
+    padding: 6px 0;
+}
 
-        #sidebar-body td:first-child {
-            color: #888;
-        }
+#right-sidebar-body td:first-child {
+    color: #888;
+}
 
-        #sidebar-body td:last-child {
-            text-align: right;
-        }
+#right-sidebar-body td:last-child {
+    text-align: right;
+}
+
+/* ─── Left Sidebar ────────────────────────────────────── */
+
+#left-sidebar {
+    display: none;
+    position: fixed;
+    top: 72px;
+    left: 0;
+    width: 260px;
+    height: calc(100vh - 88px);
+    background: white;
+    z-index: 998;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.2);
+    font-family: sans-serif;
+    font-size: 14px;
+    overflow-y: auto;
+}
+
+#left-sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid #eee;
+}
+
+#left-sidebar-header strong {
+    font-size: 18px;
+}
+
+#left-sidebar-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #666;
+}
+
+#left-sidebar-body {
+    padding: 16px;
+}
+
+#country-search {
+    width: 100%;
+    padding: 6px 10px;
+    margin-bottom: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+#country-search:focus {
+    outline: none;
+    border-color: #64b5f6;
+}
+
+#country-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.country-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.country-item:hover {
+    background: #f8f9fa;
+}
+
+.country-item input[type="checkbox"] {
+    accent-color: #64b5f6;
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.country-item label {
+    cursor: pointer;
+    color: #212529;
+    flex: 1;
+}
+
+.country-item .country-count {
+    color: #888;
+    font-size: 12px;
+}
+
+#left-sidebar-toggle {
+    position: fixed;
+    top: 72px;
+    left: 0;
+    z-index: 997;
+    background: white;
+    border: none;
+    border-radius: 0 8px 8px 0;
+    padding: 10px 12px;
+    font-size: 16px;
+    color: #444;
+    box-shadow: 2px 0 6px rgba(0,0,0,0.15);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+#left-sidebar-toggle:hover {
+    background: #f0f0f0;
+}
 
 /* ─── Navbar ──────────────────────────────────────────── */
 
