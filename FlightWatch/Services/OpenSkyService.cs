@@ -133,4 +133,39 @@ public class OpenSkyService
 
         return waypoints;
     }
+
+    public async Task<object> GetFlightInfoAsync(string icao24, string callsign)
+    {
+        object? aircraft = null;
+        object? flightroute = null;
+
+        try
+        {
+            var res = await _httpClient.GetAsync($"https://api.adsbdb.com/v0/aircraft/{icao24}");
+            if (res.IsSuccessStatusCode)
+            {
+                var json = await res.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(json);
+                aircraft = doc.RootElement.GetProperty("response").GetProperty("aircraft").Clone();
+            }
+        }
+        catch { }
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(callsign))
+            {
+                var res = await _httpClient.GetAsync($"https://api.adsbdb.com/v0/callsign/{callsign}");
+                if (res.IsSuccessStatusCode)
+                {
+                    var json = await res.Content.ReadAsStringAsync();
+                    using var doc = JsonDocument.Parse(json);
+                    flightroute = doc.RootElement.GetProperty("response").GetProperty("flightroute").Clone();
+                }
+            }
+        }
+        catch { }
+
+        return new { aircraft, flightroute };
+    }
 }

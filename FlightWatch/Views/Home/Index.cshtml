@@ -30,13 +30,31 @@
 <!-- Right Sidebar: Flight Info -->
 <div id="right-sidebar">
     <div id="right-sidebar-header">
-        <h5>Flight Details</h5>
         <strong id="right-sidebar-callsign">Unknown</strong>
         <button id="right-sidebar-close" onclick="closeRightSidebar()">✕</button>
     </div>
     <div id="right-sidebar-body">
+        <img id="sb-photo" src="" alt="" style="width:100%; border-radius:6px; margin-bottom:12px; display:none;" />
         <table>
+            <tr><td colspan="2" style="color:#aaa; font-size:11px; padding-bottom:4px;">ROUTE</td></tr>
+            <tr><td>Route</td><td id="sb-route"></td></tr>
+            <tr><td>Origin</td><td id="sb-origin"></td></tr>
+            <tr><td>Origin IATA</td><td id="sb-origin-iata"></td></tr>
+            <tr><td>Origin City</td><td id="sb-origin-city"></td></tr>
+            <tr><td>Origin Country</td><td id="sb-origin-country"></td></tr>
+            <tr><td>Destination</td><td id="sb-destination"></td></tr>
+            <tr><td>Dest IATA</td><td id="sb-dest-iata"></td></tr>
+            <tr><td>Dest City</td><td id="sb-dest-city"></td></tr>
+            <tr><td>Dest Country</td><td id="sb-dest-country"></td></tr>
+            <tr><td>Airline</td><td id="sb-airline"></td></tr>
+            <tr><td colspan="2" style="color:#aaa; font-size:11px; padding-top:20px; padding-bottom:4px;">AIRCRAFT</td></tr>
+            <tr><td>Type</td><td id="sb-type"></td></tr>
+            <tr><td>ICAO Type</td><td id="sb-icao-type"></td></tr>
+            <tr><td>Manufacturer</td><td id="sb-manufacturer"></td></tr>
+            <tr><td>Registration</td><td id="sb-registration"></td></tr>
+            <tr><td>Owner</td><td id="sb-owner"></td></tr>
             <tr><td>Country</td><td id="sb-country"></td></tr>
+            <tr><td colspan="2" style="color:#aaa; font-size:11px; padding-top:20px; padding-bottom:4px;">LIVE DATA</td></tr>
             <tr><td>Altitude</td><td id="sb-altitude"></td></tr>
             <tr><td>Geo Altitude</td><td id="sb-geo-altitude"></td></tr>
             <tr><td>Speed</td><td id="sb-speed"></td></tr>
@@ -48,7 +66,7 @@
             <tr><td>Position Source</td><td id="sb-source"></td></tr>
             <tr><td>Category</td><td id="sb-category"></td></tr>
             <tr><td>SPI</td><td id="sb-spi"></td></tr>
-            <tr><td>Last Contact</td><td id="sb-contact"></td></tr>
+            <tr><td>Last Contact</td><td id="sb-contact"></td></tr> 
         </table>
     </div>
 </div>

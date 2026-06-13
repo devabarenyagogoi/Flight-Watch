@@ -111,6 +111,7 @@ const categories = {
 let currentTrack = null;
 
 async function openRightSidebar(f) {
+    // Live data
     document.getElementById('right-sidebar-callsign').textContent = f.callsign ?? 'Unknown';
     document.getElementById('sb-country').textContent = f.originCountry ?? 'N/A';
     document.getElementById('sb-altitude').textContent = f.baroAltitude ? (f.baroAltitude / 1000).toFixed(1) + ' km' : 'N/A';
@@ -126,6 +127,16 @@ async function openRightSidebar(f) {
     document.getElementById('sb-spi').textContent = f.spi ? 'Yes' : 'No';
     document.getElementById('sb-contact').textContent = f.lastContact ? new Date(f.lastContact * 1000).toUTCString() : 'N/A';
 
+    // Clear enriched fields while loading
+    const enrichedIds = ['sb-type', 'sb-icao-type', 'sb-manufacturer', 'sb-registration',
+        'sb-owner', 'sb-origin', 'sb-origin-iata', 'sb-origin-country',
+        'sb-destination', 'sb-dest-iata', 'sb-dest-country', 'sb-airline'];
+    enrichedIds.forEach(id => document.getElementById(id).textContent = 'Loading...');
+
+    const photo = document.getElementById('sb-photo');
+    photo.style.display = 'none';
+    photo.src = '';
+
     document.getElementById('right-sidebar').style.display = 'block';
 
     if (currentTrack) {
@@ -133,19 +144,70 @@ async function openRightSidebar(f) {
         currentTrack = null;
     }
 
+    // Fetch track and adsbdb info in parallel
+    const callsign = f.callsign ?? '';
+    const [trackRes, infoRes] = await Promise.allSettled([
+        fetch(`/api/flight/track/${f.icao24}`),
+        callsign ? fetch(`/api/flight/info/${f.icao24}/${callsign}`) : Promise.resolve(null)
+    ]);
+
+    // Draw track
     try {
-        const res = await fetch(`/api/flight/track/${f.icao24}`);
-        const waypoints = await res.json();
-        if (waypoints.length > 1) {
-            currentTrack = L.polyline(waypoints, {
-                color: '#64b5f6',
-                weight: 2,
-                opacity: 0.8,
-                dashArray: '6, 6'
-            }).addTo(map);
+        if (trackRes.status === 'fulfilled') {
+            const waypoints = await trackRes.value.json();
+            if (waypoints.length > 1) {
+                currentTrack = L.polyline(waypoints, {
+                    color: '#64b5f6',
+                    weight: 2,
+                    opacity: 0.8,
+                    dashArray: '6, 6'
+                }).addTo(map);
+            }
         }
     } catch (err) {
         console.error('Failed to fetch track:', err);
+    }
+
+    // Populate enriched fields
+    try {
+        if (infoRes.status === 'fulfilled' && infoRes.value) {
+            const info = await infoRes.value.json();
+
+            const a = info.aircraft;
+            document.getElementById('sb-type').textContent = a?.type ?? 'N/A';
+            document.getElementById('sb-icao-type').textContent = a?.icaoType ?? 'N/A';
+            document.getElementById('sb-manufacturer').textContent = a?.manufacturer ?? 'N/A';
+            document.getElementById('sb-registration').textContent = a?.registration ?? 'N/A';
+            document.getElementById('sb-owner').textContent = a?.registeredOwner ?? 'N/A';
+
+            if (a?.urlPhotoThumbnail) {
+                photo.src = a.urlPhotoThumbnail;
+                photo.style.display = 'block';
+            }
+
+            const r = info.flightroute;
+            document.getElementById('sb-origin').textContent = r?.origin?.name ?? 'N/A';
+            document.getElementById('sb-origin-iata').textContent = r?.origin?.iata_code ?? 'N/A';
+            document.getElementById('sb-origin-country').textContent = r?.origin?.country_name ?? 'N/A';
+            document.getElementById('sb-destination').textContent = r?.destination?.name ?? 'N/A';
+            document.getElementById('sb-dest-iata').textContent = r?.destination?.iata_code ?? 'N/A';
+            document.getElementById('sb-dest-country').textContent = r?.destination?.country_name ?? 'N/A';
+            document.getElementById('sb-airline').textContent = r?.airline?.name ?? 'N/A';
+            document.getElementById('sb-origin-city').textContent = r?.origin?.municipality ?? 'N/A';
+            document.getElementById('sb-dest-city').textContent = r?.destination?.municipality ?? 'N/A';
+
+            // Build route string like "YXE – YWG"
+            const originIata = r?.origin?.iata_code;
+            const destIata = r?.destination?.iata_code;
+            document.getElementById('sb-route').textContent =
+                (originIata && destIata) ? `${originIata} - ${destIata}` : 'N/A';
+
+        } else {
+            enrichedIds.forEach(id => document.getElementById(id).textContent = 'N/A');
+        }
+    } catch (err) {
+        console.error('Failed to fetch flight info:', err);
+        enrichedIds.forEach(id => document.getElementById(id).textContent = 'N/A');
     }
 }
 
@@ -274,21 +336,59 @@ function applyFilter() {
 // ─── Markers ───────────────────────────────────────────
 
 let markers = {};
-
+let currentRenderToken = 0;
+let moveEndTimer = null;
+map.on('moveend', () => {
+    clearTimeout(moveEndTimer);
+    moveEndTimer = setTimeout(() => applyFilter(), 150);
+});
 function renderMarkers(flights) {
-    Object.values(markers).forEach(m => map.removeLayer(m));
-    markers = {};
+    const bounds = map.getBounds();
 
+    // Find flights that should be visible
+    const shouldBeVisible = new Map();
     flights.forEach(f => {
         if (f.latitude == null || f.longitude == null) return;
-
-        const marker = L.marker([f.latitude, f.longitude], {
-            icon: planeIcon(f.trueTrack ?? 0),
-        }).addTo(map);
-
-        marker.on('click', () => openRightSidebar(f));
-        markers[f.icao24] = marker;
+        if (bounds.contains([f.latitude, f.longitude])) {
+            shouldBeVisible.set(f.icao24, f);
+        }
     });
+
+    // Remove markers that are no longer in bounds
+    Object.keys(markers).forEach(icao24 => {
+        if (!shouldBeVisible.has(icao24)) {
+            map.removeLayer(markers[icao24]);
+            delete markers[icao24];
+        }
+    });
+
+    // Add only new markers that aren't already on the map
+    const toAdd = [...shouldBeVisible.values()].filter(f => !markers[f.icao24]);
+
+    const token = ++currentRenderToken;
+    const BATCH_SIZE = 100;
+    let index = 0;
+
+    function renderBatch() {
+        if (token !== currentRenderToken) return;
+
+        const batch = toAdd.slice(index, index + BATCH_SIZE);
+        batch.forEach(f => {
+            const marker = L.marker([f.latitude, f.longitude], {
+                icon: planeIcon(f.trueTrack ?? 0),
+            }).addTo(map);
+
+            marker.on('click', () => openRightSidebar(f));
+            markers[f.icao24] = marker;
+        });
+
+        index += BATCH_SIZE;
+        if (index < toAdd.length) {
+            requestAnimationFrame(renderBatch);
+        }
+    }
+
+    renderBatch();
 }
 
 // ─── SignalR ───────────────────────────────────────────

@@ -38,4 +38,18 @@ public class FlightController : ControllerBase
             return StatusCode(500, $"Error fetching track: {ex.Message}");
         }
     }
+
+    [HttpGet("info/{icao24}/{callsign}")]
+    public async Task<IActionResult> GetFlightInfo(string icao24, string callsign)
+    {
+        try
+        {
+            var info = await _openSkyService.GetFlightInfoAsync(icao24, callsign);
+            return Ok(info);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error fetching flight info: {ex.Message}");
+        }
+    }
 }
