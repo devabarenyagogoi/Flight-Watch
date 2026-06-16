@@ -230,11 +230,22 @@ body.flightwatch-page {
     background: #f0f0f0;
 }
 
-/* ─── Navbar ──────────────────────────────────────────── */
+/* ─── Footer ──────────────────────────────────────────── */
 
-header {
-    position: relative;
-    z-index: 999;
+.fw-footer {
+    border-top: 1px solid #dee2e6;
+    padding: 16px 0;
+    color: #6c757d;
+    font-size: 14px;
+}
+
+/* ─── Navbar layout for FlightWatch ──────────────────── */
+
+.fw-brand {
+    font-size: 18px;
+    font-weight: 600;
+    color: #212529;
+    margin-right: 24px;
 }
 
 .fw-navbar {
@@ -251,48 +262,82 @@ header {
     padding: 0 16px;
 }
 
-.fw-brand {
-    font-size: 18px;
-    font-weight: 600;
-    color: #212529;
-    text-decoration: none;
-    margin-right: 24px;
-}
-
-    .fw-brand:hover {
-        color: #0d6efd;
-    }
-
-.fw-nav-links {
-    flex-grow: 1;
-}
-
-.fw-nav-list {
+#search-container {
+    position: relative;
+    flex: 1;
     display: flex;
-    list-style: none;
-    margin: 0;
-    padding: 0;
+    align-items: center;
     gap: 8px;
+    background: #f1f3f5;
+    padding: 6px 12px;
+    border-radius: 8px;
+    max-width: 400px;
+    margin: 0 auto;
 }
 
-.fw-nav-link {
-    color: #212529;
-    text-decoration: none;
-    padding: 6px 10px;
-    border-radius: 6px;
+#flight-search {
+    flex: 1;
+    border: none;
+    outline: none;
     font-size: 14px;
+    background: transparent;
+    color: #212529;
 }
 
-    .fw-nav-link:hover {
-        background: #f8f9fa;
-        color: #0d6efd;
+#search-btn {
+    border: none;
+    background: none;
+    color: #888;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0;
+    white-space: nowrap;
+}
+
+    #search-btn:hover {
+        color: #212529;
     }
 
-/* ─── Footer ──────────────────────────────────────────── */
-
-.fw-footer {
-    border-top: 1px solid #dee2e6;
-    padding: 16px 0;
-    color: #6c757d;
+#flights-counter {
     font-size: 14px;
+    color: #444;
+    white-space: nowrap;
+    margin-left: auto;
 }
+
+#search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    max-height: 280px;
+    overflow-y: auto;
+    z-index: 1001;
+    display: none;
+}
+
+.search-result-item {
+    padding: 14px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+    .search-result-item:hover {
+        background: #f1f3f5;
+    }
+
+    .search-result-item span.sr-callsign {
+        font-weight: 600;
+        color: #212529;
+    }
+
+    .search-result-item span.sr-meta {
+        color: #888;
+        font-size: 12px;
+    }

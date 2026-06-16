@@ -479,3 +479,74 @@ connection.on("ReceiveFlights", (flights) => {
 });
 
 connection.start().catch(err => console.error('SignalR connection error:', err));
+
+const searchInput = document.getElementById("flight-search");
+const searchButton = document.getElementById("search-btn");
+const searchResults = document.getElementById("search-results");
+
+searchButton?.addEventListener("click", searchFlight);
+
+searchInput?.addEventListener("keypress", function (e) {
+    if (e.key === "Enter") searchFlight();
+});
+
+searchInput?.addEventListener("input", function () {
+    const query = searchInput.value.trim().toLowerCase();
+    if (!query) {
+        searchResults.style.display = 'none';
+        searchResults.innerHTML = '';
+        return;
+    }
+    showSearchResults(query);
+});
+
+document.addEventListener("click", (e) => {
+    if (!e.target.closest('#search-container')) {
+        searchResults.style.display = 'none';
+    }
+});
+
+function showSearchResults(query) {
+    const matches = allFlights.filter(f =>
+        f.callsign?.trim().toLowerCase().includes(query) ||
+        f.icao24?.toLowerCase().includes(query)
+    ).slice(0, 20);
+
+    if (matches.length === 0) {
+        searchResults.style.display = 'none';
+        return;
+    }
+
+    searchResults.innerHTML = matches.map(f => {
+        const callsign = f.callsign?.trim() || f.icao24;
+        const meta = [f.originCountry, f.icao24].filter(Boolean).join(' · ');
+        return `<div class="search-result-item" data-icao="${f.icao24}">
+            <span class="sr-callsign">${callsign}</span>
+            <span class="sr-meta">${meta}</span>
+        </div>`;
+    }).join('');
+
+    searchResults.style.display = 'block';
+
+    searchResults.querySelectorAll('.search-result-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const icao = item.dataset.icao;
+            const flight = allFlights.find(f => f.icao24 === icao);
+            if (!flight) return;
+
+            searchResults.style.display = 'none';
+            searchInput.value = flight.callsign?.trim() || flight.icao24;
+
+            if (flight.longitude != null && flight.latitude != null) {
+                map.flyTo({ center: [flight.longitude, flight.latitude], zoom: 6, speed: 1.5 });
+            }
+            openRightSidebar(flight);
+        });
+    });
+}
+
+function searchFlight() {
+    const query = searchInput.value.trim().toLowerCase();
+    if (!query) return;
+    showSearchResults(query);
+}

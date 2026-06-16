@@ -13,17 +13,21 @@
     <header>
         <nav class="fw-navbar">
             <div class="fw-navbar-inner">
-                <a class="fw-brand" asp-area="" asp-controller="Home" asp-action="Index">FlightWatch</a>
-                <button class="fw-toggler navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse fw-nav-links">
-                    <ul class="fw-nav-list">
-                        <li><a class="fw-nav-link" asp-area="" asp-controller="Home" asp-action="Index">Home</a></li>
-                        <li><a class="fw-nav-link" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a></li>
-                    </ul>
-                </div>
+                <span class="fw-brand">FlightWatch</span>
+
+                @if (ViewData["Title"]?.ToString() == "FlightWatch")
+                {
+                    <div id="search-container">
+                        <i class="bi bi-search" style="color:#888; font-size:14px;"></i>
+                        <input type="text" id="flight-search" placeholder="Search callsign or ICAO24..." />
+                        <button id="search-btn">Search</button>
+                        <div id="search-results"></div>
+                    </div>
+
+                    <div id="flights-counter">
+                        ✈️ Flights: <strong id="count">Loading...</strong>
+                    </div>
+                }
             </div>
         </nav>
     </header>
@@ -41,11 +45,6 @@
                 @RenderBody()
             </main>
         </div>
-        <footer class="fw-footer">
-            <div class="container">
-                &copy; 2026 - FlightWatch - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-            </div>
-        </footer>
     }
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
