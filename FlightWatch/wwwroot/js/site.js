@@ -1,19 +1,32 @@
-﻿const map = L.map('map', {
+﻿const map = new maplibregl.Map({
+    container: 'map',
+    style: {
+        version: 8,
+        sources: {
+            'carto-voyager': {
+                type: 'raster',
+                tiles: ['https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png'],
+                tileSize: 256,
+                attribution: '© OpenStreetMap contributors © CARTO'
+            }
+        },
+        layers: [{
+            id: 'carto-voyager-layer',
+            type: 'raster',
+            source: 'carto-voyager'
+        }]
+    },
+    center: [0, 20],
+    zoom: 2,
     minZoom: 2,
     maxZoom: 20,
-    worldCopyJump: true,
-    maxBounds: [[-90, -260], [90, 260]],
-    maxBoundsViscosity: 0.8
-}).setView([20, 0], 3);
+    renderWorldCopies: false
+});
 
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap contributors © CARTO',
-}).addTo(map);
+map.addControl(new maplibregl.NavigationControl(), 'top-right');
+map.addControl(new maplibregl.ScaleControl(), 'bottom-left');
 
-// ─── Day/Night Terminator ──────────────────────────────
-
-let nightOverlay = null;
-let twilightOverlays = [];
+// ─── Day/Night Terminator Helpers ──────────────────────
 
 function getDayOfYear(date) {
     const start = new Date(date.getFullYear(), 0, 0);
@@ -35,66 +48,127 @@ function getTerminatorPoints(now, offsetDeg) {
             -Math.cos(lngRad),
             Math.tan(declination)
         ) * 180 / Math.PI;
-        points.push([lat, lng]);
+        points.push([lng, lat]);
     }
 
     const nightPole = declination * 180 / Math.PI > 0 ? -90 : 90;
-    points.push([nightPole, 360]);
-    points.push([nightPole, -360]);
+    points.push([360, nightPole]);
+    points.push([-360, nightPole]);
+    points.push(points[0]);
 
     return points;
 }
 
+function buildTerminatorGeoJSON(now, offsetDeg) {
+    return {
+        type: 'Feature',
+        geometry: {
+            type: 'Polygon',
+            coordinates: [getTerminatorPoints(now, offsetDeg)]
+        }
+    };
+}
+
 function updateTerminator() {
     const now = new Date();
-
-    if (nightOverlay) map.removeLayer(nightOverlay);
-    twilightOverlays.forEach(l => map.removeLayer(l));
-    twilightOverlays = [];
-
-    nightOverlay = L.polygon(getTerminatorPoints(now, 0), {
-        color: 'transparent',
-        fillColor: '#000033',
-        fillOpacity: 0.30,
-        interactive: false,
-        smoothFactor: 3
-    }).addTo(map);
-
-    const twilightLayers = [
-        { offset: 3, opacity: 0.25 },
-        { offset: 6, opacity: 0.19 },
-        { offset: 9, opacity: 0.13 },
-        { offset: 12, opacity: 0.07 },
+    const layers = [
+        { id: 'terminator-night', offset: 0 },
+        { id: 'terminator-twilight-1', offset: 3 },
+        { id: 'terminator-twilight-2', offset: 6 },
+        { id: 'terminator-twilight-3', offset: 9 },
+        { id: 'terminator-twilight-4', offset: 12 },
     ];
-
-    twilightLayers.forEach(({ offset, opacity }) => {
-        const layer = L.polygon(getTerminatorPoints(now, offset), {
-            color: 'transparent',
-            fillColor: '#000033',
-            fillOpacity: opacity,
-            interactive: false,
-            smoothFactor: 3
-        }).addTo(map);
-        twilightOverlays.push(layer);
+    layers.forEach(({ id, offset }) => {
+        if (map.getSource(id)) {
+            map.getSource(id).setData(buildTerminatorGeoJSON(now, offset));
+        }
     });
 }
 
-updateTerminator();
-setInterval(updateTerminator, 30000);
+// ─── Map Load ──────────────────────────────────────────
 
-// ─── Plane Icons ───────────────────────────────────────
+map.on('load', () => {
 
-const planeIcon = (heading) => L.divIcon({
-    html: `<i class="bi bi-airplane-fill" style="
-                font-size: 16px;
-                color: #64b5f6;
-                -webkit-text-stroke: 1px black;
-                display: block;
-                transform: rotate(${heading}deg);
-            "></i>`,
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
-    className: ''
+    // ─── Plane Icon ────────────────────────────────────
+    const svgStr = `<svg fill="#64b5f6"
+            outline='#111111'
+            width="800px"
+            height="800px"
+            viewBox="-2.5 0 19 19"
+            xmlns="http://www.w3.org/2000/svg">
+            <path stroke="#000000"
+            stroke-width="0.5"
+            d="M12.382 5.304 10.096 7.59l.006.02L11.838 14a.908.908 0 0 1-.211.794l-.573.573a.339.339 0 0 1-.566-.08l-2.348-4.25-.745-.746-1.97 1.97a3.311 3.311 0 0 1-.75.504l.44 1.447a.875.875 0 0 1-.199.79l-.175.176a.477.477 0 0 1-.672 0l-1.04-1.039-.018-.02-.788-.786-.02-.02-1.038-1.039a.477.477 0 0 1 0-.672l.176-.176a.875.875 0 0 1 .79-.197l1.447.438a3.322 3.322 0 0 1 .504-.75l1.97-1.97-.746-.744-4.25-2.348a.339.339 0 0 1-.08-.566l.573-.573a.909.909 0 0 1 .794-.211l6.39 1.736.02.006 2.286-2.286c.37-.372 1.621-1.02 1.993-.65.37.372-.279 1.622-.65 1.993z"/>
+        </svg>`;
+
+    const img = new Image(45, 45);
+    img.onload = () => map.addImage('plane-icon', img);
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
+
+    // ─── Terminator Sources & Layers ───────────────────
+    const terminatorLayers = [
+        { id: 'terminator-night', offset: 0, opacity: 0.18 },
+        { id: 'terminator-twilight-1', offset: 3, opacity: 0.14 },
+        { id: 'terminator-twilight-2', offset: 6, opacity: 0.10 },
+        { id: 'terminator-twilight-3', offset: 9, opacity: 0.07 },
+        { id: 'terminator-twilight-4', offset: 12, opacity: 0.04 },
+    ];
+
+    terminatorLayers.forEach(({ id, offset, opacity }) => {
+        map.addSource(id, {
+            type: 'geojson',
+            data: buildTerminatorGeoJSON(new Date(), offset)
+        });
+        map.addLayer({
+            id: `${id}-layer`,
+            type: 'fill',
+            source: id,
+            paint: {
+                'fill-color': '#000033',
+                'fill-opacity': opacity,
+                'fill-antialias': false,
+                'fill-outline-color': 'rgba(0, 0, 0, 0)'
+            }
+        });
+    });
+
+    // ─── Flights Source & Layer ────────────────────────
+    map.addSource('flights', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+    });
+
+    map.addLayer({
+        id: 'flights-layer',
+        type: 'symbol',
+        source: 'flights',
+        layout: {
+            'icon-image': 'plane-icon',
+            'icon-size': 0.5,
+            'icon-rotate': ['get', 'heading'],
+            'icon-rotation-alignment': 'map',
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true
+        }
+    });
+
+    // ─── Click & Hover ─────────────────────────────────
+    map.on('click', 'flights-layer', (e) => {
+        const props = e.features[0].properties;
+        const flight = allFlights.find(f => f.icao24 === props.icao24);
+        if (flight) openRightSidebar(flight);
+    });
+
+    map.on('mouseenter', 'flights-layer', () => {
+        map.getCanvas().style.cursor = 'pointer';
+    });
+    map.on('mouseleave', 'flights-layer', () => {
+        map.getCanvas().style.cursor = '';
+    });
+
+    // Initial terminator draw + interval
+    updateTerminator();
+    setInterval(updateTerminator, 30000);
 });
 
 // ─── Right Sidebar ─────────────────────────────────────
@@ -111,7 +185,6 @@ const categories = {
 let currentTrack = null;
 
 async function openRightSidebar(f) {
-    // Live data
     document.getElementById('right-sidebar-callsign').textContent = f.callsign ?? 'Unknown';
     document.getElementById('sb-country').textContent = f.originCountry ?? 'N/A';
     document.getElementById('sb-altitude').textContent = f.baroAltitude ? (f.baroAltitude / 1000).toFixed(1) + ' km' : 'N/A';
@@ -127,7 +200,6 @@ async function openRightSidebar(f) {
     document.getElementById('sb-spi').textContent = f.spi ? 'Yes' : 'No';
     document.getElementById('sb-contact').textContent = f.lastContact ? new Date(f.lastContact * 1000).toUTCString() : 'N/A';
 
-    // Clear enriched fields while loading
     const enrichedIds = ['sb-type', 'sb-icao-type', 'sb-manufacturer', 'sb-registration',
         'sb-owner', 'sb-origin', 'sb-origin-iata', 'sb-origin-country',
         'sb-destination', 'sb-dest-iata', 'sb-dest-country', 'sb-airline'];
@@ -140,11 +212,11 @@ async function openRightSidebar(f) {
     document.getElementById('right-sidebar').style.display = 'block';
 
     if (currentTrack) {
-        map.removeLayer(currentTrack);
+        if (map.getLayer('track-layer')) map.removeLayer('track-layer');
+        if (map.getSource('track')) map.removeSource('track');
         currentTrack = null;
     }
 
-    // Fetch track and adsbdb info in parallel
     const callsign = f.callsign ?? '';
     const [trackRes, infoRes] = await Promise.allSettled([
         fetch(`/api/flight/track/${f.icao24}`),
@@ -156,12 +228,33 @@ async function openRightSidebar(f) {
         if (trackRes.status === 'fulfilled') {
             const waypoints = await trackRes.value.json();
             if (waypoints.length > 1) {
-                currentTrack = L.polyline(waypoints, {
-                    color: '#64b5f6',
-                    weight: 2,
-                    opacity: 0.8,
-                    dashArray: '6, 6'
-                }).addTo(map);
+                if (map.getLayer('track-layer')) map.removeLayer('track-layer');
+                if (map.getSource('track')) map.removeSource('track');
+
+                map.addSource('track', {
+                    type: 'geojson',
+                    data: {
+                        type: 'Feature',
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: waypoints.map(([lat, lng]) => [lng, lat])
+                        }
+                    }
+                });
+
+                map.addLayer({
+                    id: 'track-layer',
+                    type: 'line',
+                    source: 'track',
+                    paint: {
+                        'line-color': '#64b5f6',
+                        'line-width': 2,
+                        'line-opacity': 0.8,
+                        'line-dasharray': [2, 2]
+                    }
+                });
+
+                currentTrack = true;
             }
         }
     } catch (err) {
@@ -196,7 +289,6 @@ async function openRightSidebar(f) {
             document.getElementById('sb-origin-city').textContent = r?.origin?.municipality ?? 'N/A';
             document.getElementById('sb-dest-city').textContent = r?.destination?.municipality ?? 'N/A';
 
-            // Build route string like "YXE – YWG"
             const originIata = r?.origin?.iata_code;
             const destIata = r?.destination?.iata_code;
             document.getElementById('sb-route').textContent =
@@ -214,7 +306,8 @@ async function openRightSidebar(f) {
 function closeRightSidebar() {
     document.getElementById('right-sidebar').style.display = 'none';
     if (currentTrack) {
-        map.removeLayer(currentTrack);
+        if (map.getLayer('track-layer')) map.removeLayer('track-layer');
+        if (map.getSource('track')) map.removeSource('track');
         currentTrack = null;
     }
 }
@@ -257,7 +350,6 @@ function renderCountryList(entries) {
     const container = document.getElementById('country-list');
     container.innerHTML = '';
 
-    // World option
     const worldItem = document.createElement('div');
     worldItem.className = 'country-item';
 
@@ -288,7 +380,6 @@ function renderCountryList(entries) {
     divider.style.cssText = 'border: none; border-top: 1px solid #eee; margin: 6px 0;';
     container.appendChild(divider);
 
-    // Per-country entries
     entries.forEach(([country, count]) => {
         const item = document.createElement('div');
         item.className = 'country-item';
@@ -335,60 +426,30 @@ function applyFilter() {
 
 // ─── Markers ───────────────────────────────────────────
 
-let markers = {};
-let currentRenderToken = 0;
-let moveEndTimer = null;
-map.on('moveend', () => {
-    clearTimeout(moveEndTimer);
-    moveEndTimer = setTimeout(() => applyFilter(), 150);
-});
 function renderMarkers(flights) {
-    const bounds = map.getBounds();
+    if (!map.getSource('flights')) return;
 
-    // Find flights that should be visible
-    const shouldBeVisible = new Map();
-    flights.forEach(f => {
-        if (f.latitude == null || f.longitude == null) return;
-        if (bounds.contains([f.latitude, f.longitude])) {
-            shouldBeVisible.set(f.icao24, f);
-        }
+    const features = flights
+        .filter(f => f.latitude != null && f.longitude != null)
+        .map(f => ({
+            type: 'Feature',
+            geometry: {
+                type: 'Point',
+                coordinates: [f.longitude, f.latitude]
+            },
+            properties: {
+                icao24: f.icao24,
+                callsign: f.callsign,
+                heading: f.trueTrack ?? 0
+            }
+        }));
+
+    map.getSource('flights').setData({
+        type: 'FeatureCollection',
+        features
     });
 
-    // Remove markers that are no longer in bounds
-    Object.keys(markers).forEach(icao24 => {
-        if (!shouldBeVisible.has(icao24)) {
-            map.removeLayer(markers[icao24]);
-            delete markers[icao24];
-        }
-    });
-
-    // Add only new markers that aren't already on the map
-    const toAdd = [...shouldBeVisible.values()].filter(f => !markers[f.icao24]);
-
-    const token = ++currentRenderToken;
-    const BATCH_SIZE = 100;
-    let index = 0;
-
-    function renderBatch() {
-        if (token !== currentRenderToken) return;
-
-        const batch = toAdd.slice(index, index + BATCH_SIZE);
-        batch.forEach(f => {
-            const marker = L.marker([f.latitude, f.longitude], {
-                icon: planeIcon(f.trueTrack ?? 0),
-            }).addTo(map);
-
-            marker.on('click', () => openRightSidebar(f));
-            markers[f.icao24] = marker;
-        });
-
-        index += BATCH_SIZE;
-        if (index < toAdd.length) {
-            requestAnimationFrame(renderBatch);
-        }
-    }
-
-    renderBatch();
+    document.getElementById('count').textContent = allFlights.length.toLocaleString();
 }
 
 // ─── SignalR ───────────────────────────────────────────
